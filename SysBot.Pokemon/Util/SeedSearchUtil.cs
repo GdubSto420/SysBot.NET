@@ -17,8 +17,10 @@ namespace SysBot.Pokemon
             return 0;
         }
 
-        public static int GetNextShinyFrame(ulong seed, out uint type)
+        public static int GetNextShinyFrame(ulong seed, out uint type, out int star, out int square)
         {
+            star = -1;
+            square = -1;
             var rng = new Xoroshiro128Plus(seed);
             for (int i = 0; ; i++)
             {
@@ -26,13 +28,27 @@ namespace SysBot.Pokemon
                 uint SIDTID = (uint)rng.NextInt(0xFFFFFFFF);
                 uint PID = (uint)rng.NextInt(0xFFFFFFFF);
                 type = GetShinyType(PID, SIDTID);
-                if (type != 0)
-                    return i;
+                if (star == -1)
+                {
+                    if (type == 1)
+                        star = i;
+                }
+
+                if (square == -1)
+                {
+                    if (type == 2)
+                        square = i;
+                }
 
                 // Get the next seed, and reset for the next iteration
                 rng = new Xoroshiro128Plus(seed);
                 seed = rng.Next();
                 rng = new Xoroshiro128Plus(seed);
+
+                if (i > 100_000)
+                    return star & square;
+                else if (star != -1 && square != -1)
+                    return star & square;
             }
         }
 

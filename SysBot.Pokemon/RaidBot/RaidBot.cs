@@ -88,6 +88,9 @@ namespace SysBot.Pokemon
 
         private async Task<bool> HostRaidAsync(SAV8SWSH sav, int code, CancellationToken token)
         {
+            if (Hub.Config.Raid.AutoRoll)
+                await AutoRollDen(token).ConfigureAwait(false);
+
             // Connect to Y-Comm
             await EnsureConnectedToYComm(Hub.Config, token).ConfigureAwait(false);
 
@@ -111,7 +114,7 @@ namespace SysBot.Pokemon
             }
 
             if (addFriends && !string.IsNullOrEmpty(Settings.FriendCode))
-                EchoUtil.Echo($"Send a friend request to Friend Code **{Settings.FriendCode}** to join in! Friends will be added after this raid.");
+                EchoUtil.Echo($"```fix\nSend a friend request to Friend Code **{Settings.FriendCode}** to join in! Friends will be added after this raid.```");
 
             // Invite others, confirm Pokémon and wait
             await Click(A, 7_000 + Hub.Config.Raid.ExtraTimeOpenRaid, token).ConfigureAwait(false);
@@ -121,7 +124,10 @@ namespace SysBot.Pokemon
             var linkcodemsg = code < 0 ? "no Link Code" : $"code **{code:0000 0000}**";
 
             string raiddescmsg = string.IsNullOrEmpty(Hub.Config.Raid.RaidDescription) ? ((Species)raidBossSpecies).ToString() : Hub.Config.Raid.RaidDescription;
-            EchoUtil.Echo($"Raid lobby for {raiddescmsg} is open with {linkcodemsg}.");
+            RaidLog(sav, linkcodemsg, raiddescmsg);
+
+            if (Hub.Config.Raid.EchoRaidNotifications)
+                EchoUtil.Echo($"```fix\nRaid lobby for {raiddescmsg} is open with {linkcodemsg}.```");
 
             var timetowait = Hub.Config.Raid.MinTimeToWait * 1_000;
             var timetojoinraid = 175_000 - timetowait;
@@ -135,7 +141,8 @@ namespace SysBot.Pokemon
             }
 
             await Task.Delay(1_000, token).ConfigureAwait(false);
-            EchoUtil.Echo($"Raid is starting now with {linkcodemsg}.");
+            if (Hub.Config.Raid.EchoRaidNotifications)
+                EchoUtil.Echo($"```fix\nRaid is starting now with {linkcodemsg}.```");
 
             /* Press A and check if we entered a raid.  If other users don't lock in,
                it will automatically start once the timer runs out. If we don't make it into
@@ -233,6 +240,8 @@ namespace SysBot.Pokemon
                 await Task.Delay(2_000, token).ConfigureAwait(false);
 
             Log("Back in the overworld!");
+            if (Hub.Config.Raid.AutoRoll)
+                return;
 
             // Reconnect to Y-Comm.
             await EnsureConnectedToYComm(Hub.Config, token).ConfigureAwait(false);
@@ -342,6 +351,115 @@ namespace SysBot.Pokemon
         {
             await Click(A, 3_500 + Hub.Config.Raid.ExtraTimeAddFriend, token).ConfigureAwait(false);
             await Click(A, 3_000 + Hub.Config.Raid.ExtraTimeAddFriend, token).ConfigureAwait(false);
+        }
+
+        private int ResetCount;
+        private int RaidLogCount;
+        private async Task AutoRollDen(CancellationToken token)
+        {
+            for (int day = 0; day < 3; day++)
+            {
+                if (ResetCount == 0 || ResetCount >= 58)
+                {
+                    await Click(B, 0_100, token).ConfigureAwait(false);
+                    await TimeMenu(token).ConfigureAwait(false);
+                    await ResetTime(token).ConfigureAwait(false);
+                    day = 0;
+                }
+
+                if (Hub.Config.Raid.NumberFriendsToAdd > 0 && Hub.Config.Raid.RaidsBetweenAddFriends > 0)
+                    addFriends = (encounterCount - Settings.InitialRaidsToHost) % Hub.Config.Raid.RaidsBetweenAddFriends == 0;
+                if (Hub.Config.Raid.NumberFriendsToDelete > 0 && Hub.Config.Raid.RaidsBetweenDeleteFriends > 0)
+                    deleteFriends = (encounterCount - Settings.InitialRaidsToHost) % Hub.Config.Raid.RaidsBetweenDeleteFriends == 0;
+
+                if (day == 0) //Enters den and invites others on day 1
+                {
+                    Log("Initializing the rolling auto-host routine.");
+                    await Click(A, 2_000 + Hub.Config.Raid.ExtraTimeInitialLobbyAR, token).ConfigureAwait(false);
+                    await Click(A, 3_000 + Hub.Config.Raid.ExtraTimeInviteOthersAR, token).ConfigureAwait(false);
+                }
+
+                await TimeMenu(token).ConfigureAwait(false); //Goes to system time screen
+                await TimeSkip(token).ConfigureAwait(false); //Skips a year
+                await Click(B, 1_500, token).ConfigureAwait(false);
+                await Click(A, 3_000 + Hub.Config.Raid.ExtraTimeLobbyQuitAR, token).ConfigureAwait(false); //Cancel lobby
+
+                if (day == 2) //We're on the fourth frame. Collect watts, exit lobby, return to main loop
+                {
+                    for (int i = 0; i < 3; i++)
+                        await Click(A, 0_750 + Hub.Config.Raid.ExtraTimeAButtonClickAR, token).ConfigureAwait(false);
+
+                    var data = await Connection.ReadBytesAsync(RaidBossOffset, 2, token).ConfigureAwait(false);
+                    raidBossSpecies = BitConverter.ToUInt16(data, 0);
+                    EchoUtil.Echo($"```fix\nRolling complete. Raid for {(Species)raidBossSpecies} will be going up shortly!```");
+
+                    for (int i = 0; i < 2; i++)
+                        await Click(B, 0_500, token).ConfigureAwait(false);
+                    Log("Completed the rolling auto-host routine.");
+                    return;
+                }
+
+                for (int i = 0; i < 3; i++)
+                    await Click(A, 0_750 + Hub.Config.Raid.ExtraTimeAButtonClickAR, token).ConfigureAwait(false);
+                await Click(A, 3_000 + Hub.Config.Raid.ExtraTimeInviteOthersAR, token).ConfigureAwait(false); //Collect watts, invite others
+            }
+        }
+
+        private async Task TimeMenu(CancellationToken token)
+        {
+            await Click(HOME, 1_500, token).ConfigureAwait(false);
+            await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 30000, 0, 1_000, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 0, 0, 0_250, token).ConfigureAwait(false);
+            await Click(DLEFT, 0_250, token).ConfigureAwait(false);
+            await Click(A, 1_000, token).ConfigureAwait(false); //Enter settings
+            await SetStick(SwitchStick.LEFT, 0, -30000, 1_500, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 0, 0, 0_250, token).ConfigureAwait(false);
+            await Click(A, 0_750, token).ConfigureAwait(false); //Scroll to system settings
+            for (int i = 0; i < 4; i++)
+                await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+            await Click(A, 0_750, token).ConfigureAwait(false); //Scroll to date/time settings
+            await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+            await Click(DDOWN, 0_250, token).ConfigureAwait(false);
+            await Click(A, 0_750, token).ConfigureAwait(false); //Scroll to date/time screen
+        }
+
+        private async Task TimeSkip(CancellationToken token)
+        {
+            await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
+            await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
+            await Click(DUP, 0_150, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 30000, 0, 1_000, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 0, 0, 0_250, token).ConfigureAwait(false);
+            await Click(A, 0_750, token).ConfigureAwait(false);
+            await Click(HOME, 1_000, token).ConfigureAwait(false);
+            await Click(HOME, 2_000, token).ConfigureAwait(false);
+            ResetCount++; //Skip one year, return back into game, increase ResetCount
+        }
+
+        private async Task ResetTime(CancellationToken token)
+        {
+            Log("Resetting system date...");
+            await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
+            await Click(DRIGHT, 0_150, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 0, -30000, 7_000, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 0, 0, 0_250, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 30000, 0, 1_000, token).ConfigureAwait(false);
+            await SetStick(SwitchStick.LEFT, 0, 0, 0_250, token).ConfigureAwait(false);
+            await Click(A, 0_750, token).ConfigureAwait(false);
+            await Click(HOME, 1_000, token).ConfigureAwait(false);
+            await Click(HOME, 2_000, token).ConfigureAwait(false); //Roll back some years, go back into game
+            ResetCount = 1;
+            Log("System date reset complete.");
+        }
+
+        private void RaidLog(SAV8SWSH sav, string linkcodemsg, string raiddescmsg)
+        {
+            if (Hub.Config.Raid.RaidLog)
+            {
+                RaidLogCount++;
+                System.IO.File.WriteAllText("RaidCode.txt", $"{raiddescmsg} raid #{RaidLogCount}\n{Hub.Config.Raid.FriendCode}\nHosting raid as: {sav.OT}\nRaid is open with {linkcodemsg}\n------------------------");
+            }
         }
     }
 }

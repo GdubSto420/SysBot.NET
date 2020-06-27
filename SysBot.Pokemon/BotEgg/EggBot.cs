@@ -13,6 +13,7 @@ namespace SysBot.Pokemon
         private readonly BotCompleteCounts Counts;
         private readonly IDumper DumpSetting;
         private readonly bool ContinueGettingEggs;
+        private readonly string Ping;
         private const SwordShieldDaycare Location = SwordShieldDaycare.Route5;
 
         public EggBot(PokeBotConfig cfg, PokeTradeHub<PK8> Hub) : base(cfg)
@@ -21,6 +22,7 @@ namespace SysBot.Pokemon
             Counts = Hub.Counts;
             DumpSetting = Hub.Config.Folder;
             ContinueGettingEggs = Hub.Config.Egg.ContinueAfterMatch;
+            Ping = !Hub.Config.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.PingOnMatch}>\n" : "";
         }
 
         private int encounterCount;
@@ -86,10 +88,10 @@ namespace SysBot.Pokemon
                 {
                     if (ContinueGettingEggs)
                     {
-                        Log("Result found! Continuing to collect more eggs.");
+                        Log($"{Ping}Result found! Continuing to collect more eggs.");
                         continue;
                     }
-                    Log("Result found! Stopping routine execution; restart the bot(s) to search again.");
+                    Log($"{Ping}Result found! Stopping routine execution; restart the bot(s) to search again.");
                     return;
                 }
             }

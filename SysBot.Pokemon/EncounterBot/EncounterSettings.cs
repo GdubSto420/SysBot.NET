@@ -19,5 +19,11 @@ namespace SysBot.Pokemon
 
         [Category(Encounter), Description("Targets the specified IVs HP/Atk/Def/SpA/SpD/Spe. Matches 0's and 31's, checks min value otherwise. Use \"x\" for unchecked IVs and \"/\" as a separator.")]
         public string DesiredIVs { get; set; } = "";
+
+        [Category(Encounter), Description("Toggle catching Pokémon. Master Ball will be used to guarantee a catch.")]
+        public bool CatchEncounter { get; set; } = false;
+
+        [Category(Encounter), Description("Toggle whether to inject Master Balls when we run out.")]
+        public bool InjectPokeBalls { get; set; } = false;
     }
 }

@@ -51,6 +51,9 @@ namespace SysBot.Pokemon
         [Category(Hosting), Description("Echoes each party member as they lock into a Pokémon.")]
         public bool EchoPartyReady { get; set; } = false;
 
+        [Category(Hosting), Description("Echoes when we invite others and when we start the raid.")]
+        public bool EchoRaidNotifications { get; set; } = false;
+
         [Category(Hosting), Description("Allows the bot to echo your Friend Code if set.")]
         public string FriendCode { get; set; } = string.Empty;
 
@@ -77,6 +80,24 @@ namespace SysBot.Pokemon
 
         [Category(Hosting), Description("The Switch profile you are using to manage friends. For example, set this to 2 if you are using the second profile.")]
         public int ProfileNumber { get; set; } = 1;
+
+        [Category(FeatureToggle), Description("When set, the bot will create a text file with current Raid Code for OBS.")]
+        public bool RaidLog { get; set; } = false;
+
+        [Category(FeatureToggle), Description("When set, the bot will roll species and set date to 2000, resetting it once it reaches 2060.")]
+        public bool AutoRoll { get; set; } = false;
+
+        [Category(Hosting), Description("Extra time in milliseconds to enter the initial lobby for AutoRoll. First lobby can be slower than subsequent ones.")]
+        public int ExtraTimeInitialLobbyAR { get; set; } = 0;
+
+        [Category(Hosting), Description("Extra time in milliseconds to wait after \"Invite Others\" before clicking HOME.")]
+        public int ExtraTimeInviteOthersAR { get; set; } = 0;
+
+        [Category(Hosting), Description("Extra time in milliseconds to wait after cancelling a lobby for overworld to load.")]
+        public int ExtraTimeLobbyQuitAR { get; set; } = 0;
+
+        [Category(Hosting), Description("Extra time in milliseconds between A button clicks when collecting watts. More than 250ms shouldn't be needed.")]
+        public int ExtraTimeAButtonClickAR { get; set; } = 0;
 
         /// <summary>
         /// Gets a random trade code based on the range settings.

@@ -63,6 +63,12 @@ namespace SysBot.Pokemon.Discord
             content = ReusableActions.StripCodeBlock(content);
             var set = new ShowdownSet(content);
             var template = AutoLegalityWrapper.GetTemplate(set);
+            if (Info.Hub.Config.Trade.Memes)
+            {
+                if (await TrollAsync(content, template).ConfigureAwait(false))
+                    return;
+            }
+
             if (set.InvalidLines.Count != 0)
             {
                 var msg = $"Unable to parse Showdown Set:\n{string.Join("\n", set.InvalidLines)}";
@@ -110,9 +116,11 @@ namespace SysBot.Pokemon.Discord
 
         private async Task AddTradeToQueueAsync(int code, string trainerName, PK8 pk8, bool sudo)
         {
-            if (!pk8.CanBeTraded())
+            if (!pk8.CanBeTraded() || !IsItemMule(pk8))
             {
-                await ReplyAsync("Provided Pokémon content is blocked from trading!").ConfigureAwait(false);
+                if (Info.Hub.Config.Trade.ItemMuleCustomMessage == string.Empty || IsItemMule(pk8))
+                    Info.Hub.Config.Trade.ItemMuleCustomMessage = "Provided Pokémon content is blocked from trading!";
+                await ReplyAsync($"{Info.Hub.Config.Trade.ItemMuleCustomMessage}").ConfigureAwait(false);
                 return;
             }
 
@@ -124,6 +132,58 @@ namespace SysBot.Pokemon.Discord
             }
 
             await Context.AddToQueueAsync(code, trainerName, sudo, pk8, PokeRoutineType.LinkTrade, PokeTradeType.Specific).ConfigureAwait(false);
+        }
+
+        private bool IsItemMule(PK8 pk8)
+        {
+            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None)
+                return true;
+            return !(pk8.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()) || pk8.IsShiny);
+        }
+
+        private async Task<bool> TrollAsync(string content, IBattleTemplate set)
+        {
+            var path = Info.Hub.Config.Trade.MemeFileNames.Split(',');
+            bool web = false;
+            if (Info.Hub.Config.Trade.MemeFileNames.Contains(".com"))
+                web = true;
+
+            if (set.HeldItem == 16)
+            {
+                if (web)
+                    await Context.Channel.SendMessageAsync($"{path[0]}").ConfigureAwait(false);
+                else await Context.Channel.SendFileAsync(path[0]).ConfigureAwait(false);
+                return true;
+            }
+            else if (set.HeldItem == 500)
+            {
+                if (web)
+                    await Context.Channel.SendMessageAsync($"{path[1]}").ConfigureAwait(false);
+                else await Context.Channel.SendFileAsync(path[1]).ConfigureAwait(false);
+                return true;
+            }
+            else if (content.Contains($"★"))
+            {
+                if (web)
+                    await Context.Channel.SendMessageAsync($"{path[2]}").ConfigureAwait(false);
+                else await Context.Channel.SendFileAsync(path[2]).ConfigureAwait(false);
+                return true;
+            }
+            else if (Info.Hub.Config.Trade.ItemMuleSpecies != Species.None && set.Shiny)
+            {
+                if (web)
+                    await Context.Channel.SendMessageAsync($"{path[3]}").ConfigureAwait(false);
+                else await Context.Channel.SendFileAsync(path[3]).ConfigureAwait(false);
+                return true;
+            }
+            else if (Info.Hub.Config.Trade.ItemMuleSpecies != Species.None && set.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()))
+            {
+                if (web)
+                    await Context.Channel.SendMessageAsync($"{path[4]}").ConfigureAwait(false);
+                else await Context.Channel.SendFileAsync(path[4]).ConfigureAwait(false);
+                return true;
+            }
+            return false;
         }
     }
 }

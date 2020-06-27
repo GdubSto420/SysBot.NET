@@ -13,6 +13,7 @@ namespace SysBot.Pokemon
     {
         public static ISeedSearchHandler<PK8> SeedChecker = new NoSeedSearchHandler<PK8>();
         private readonly PokeTradeHub<PK8> Hub;
+        private bool FixAds;
 
         /// <summary>
         /// Folder to dump received trade data to.
@@ -278,9 +279,23 @@ namespace SysBot.Pokemon
             {
                 // Inject the shown Pokémon.
                 var clone = (PK8)pk.Clone();
+                var adOT = System.Text.RegularExpressions.Regex.Match(clone.OT_Name, @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*)|(TV$)").Value != "" 
+                    || System.Text.RegularExpressions.Regex.Match(clone.Nickname, @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*)|(TV$)").Value != "";
 
-                if (Hub.Config.Discord.ReturnPK8s)
+                if (Hub.Config.Discord.ReturnPK8s && !Hub.Config.Trade.FixAdOTs)
                     poke.SendNotification(this, clone, "Here's what you showed me!");
+
+                if (Hub.Config.Trade.FixAdOTs)
+                {
+                    FixMachamps(clone, poke, TrainerName, adOT);
+
+                    if (FixAds)
+                    {
+                        poke.SendNotification(this, "```fix\nNo website ad detected in Nickname or OT. Exiting trade...```");
+                        await ExitTrade(Hub.Config, true, token).ConfigureAwait(false);
+                        return PokeTradeResult.IllegalTrade;
+                    }
+                }
 
                 var la = new LegalityAnalysis(clone);
                 if (!la.Valid && Hub.Config.Legality.VerifyLegality)
@@ -301,33 +316,49 @@ namespace SysBot.Pokemon
                 if (Hub.Config.Legality.ResetHOMETracker)
                     clone.Tracker = 0;
 
-                poke.SendNotification(this, $"**Cloned your {(Species)clone.Species}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
-                Log($"Cloned a {(Species)clone.Species}. Waiting for user to change their Pokémon...");
-
-                // Separate this out from WaitForPokemonChanged since we compare to old EC from original read.
-                partnerFound = await ReadUntilChanged(LinkTradePartnerPokemonOffset, oldEC, 15_000, 0_200, false, token).ConfigureAwait(false);
-
-                if (!partnerFound)
+                if (!FixAds && Hub.Config.Trade.FixAdOTs)
                 {
-                    poke.SendNotification(this, "**HEY CHANGE IT NOW OR I AM LEAVING!!!**");
-                    // They get one more chance.
+                    poke.SendNotification(this, $"```fix\nFixed your {(Species)clone.Species}!\nNow confirm the trade!```");
+                    Log($"Fixed Nickname/OT for {(Species)clone.Species}.");
+
+                    await ReadUntilPresent(LinkTradePartnerPokemonOffset, 3_000, 1_000, token).ConfigureAwait(false);
+                    await Click(A, 0_800, token).ConfigureAwait(false);
+                    await SetBoxPokemon(clone, InjectBox, InjectSlot, token, sav).ConfigureAwait(false);
+                    pkm = clone;
+
+                    for (int i = 0; i < 5; i++)
+                        await Click(A, 0_500, token).ConfigureAwait(false);
+                }
+                else
+                {
+                    poke.SendNotification(this, $"**Cloned your {(Species)clone.Species}!**\nNow press B to cancel your offer and trade me a Pokémon you don't want.");
+                    Log($"Cloned a {(Species)clone.Species}. Waiting for user to change their Pokémon...");
+
+                    // Separate this out from WaitForPokemonChanged since we compare to old EC from original read.
                     partnerFound = await ReadUntilChanged(LinkTradePartnerPokemonOffset, oldEC, 15_000, 0_200, false, token).ConfigureAwait(false);
+
+                    if (!partnerFound)
+                    {
+                        poke.SendNotification(this, "**HEY CHANGE IT NOW OR I AM LEAVING!!!**");
+                        // They get one more chance.
+                        partnerFound = await ReadUntilChanged(LinkTradePartnerPokemonOffset, oldEC, 15_000, 0_200, false, token).ConfigureAwait(false);
+                    }
+
+                    var pk2 = await ReadUntilPresent(LinkTradePartnerPokemonOffset, 3_000, 1_000, token).ConfigureAwait(false);
+                    if (!partnerFound || pk2 == null || SearchUtil.HashByDetails(pk2) == SearchUtil.HashByDetails(pk))
+                    {
+                        Log("Trading partner did not change their Pokémon.");
+                        await ExitTrade(Hub.Config, true, token).ConfigureAwait(false);
+                        return PokeTradeResult.TrainerTooSlow;
+                    }
+
+                    await Click(A, 0_800, token).ConfigureAwait(false);
+                    await SetBoxPokemon(clone, InjectBox, InjectSlot, token, sav).ConfigureAwait(false);
+                    pkm = clone;
+
+                    for (int i = 0; i < 5; i++)
+                        await Click(A, 0_500, token).ConfigureAwait(false);
                 }
-
-                var pk2 = await ReadUntilPresent(LinkTradePartnerPokemonOffset, 3_000, 1_000, token).ConfigureAwait(false);
-                if (!partnerFound || pk2 == null || SearchUtil.HashByDetails(pk2) == SearchUtil.HashByDetails(pk))
-                {
-                    Log("Trading partner did not change their Pokémon.");
-                    await ExitTrade(Hub.Config, true, token).ConfigureAwait(false);
-                    return PokeTradeResult.TrainerTooSlow;
-                }
-
-                await Click(A, 0_800, token).ConfigureAwait(false);
-                await SetBoxPokemon(clone, InjectBox, InjectSlot, token, sav).ConfigureAwait(false);
-                pkm = clone;
-
-                for (int i = 0; i < 5; i++)
-                    await Click(A, 0_500, token).ConfigureAwait(false);
             }
 
             await Click(A, 3_000, token).ConfigureAwait(false);
@@ -356,7 +387,7 @@ namespace SysBot.Pokemon
             // Trade was Successful!
             var traded = await ReadBoxPokemon(InjectBox, InjectSlot, token).ConfigureAwait(false);
             // Pokémon in b1s1 is same as the one they were supposed to receive (was never sent).
-            if (SearchUtil.HashByDetails(traded) == SearchUtil.HashByDetails(pkm))
+            if (FixAds && SearchUtil.HashByDetails(traded) == SearchUtil.HashByDetails(pkm))
             {
                 Log("User did not complete the trade.");
                 return PokeTradeResult.TrainerTooSlow;
@@ -655,6 +686,23 @@ namespace SysBot.Pokemon
         {
             var oldEC = await Connection.ReadBytesAsync(offset, 4, token).ConfigureAwait(false);
             return await ReadUntilChanged(offset, oldEC, waitms, waitInterval, false, token).ConfigureAwait(false);
+        }
+
+        private bool FixMachamps(PK8 clone, PokeTradeDetail<PK8> poke, string TrainerName, bool adOT)
+        {
+            if (adOT && clone.OT_Name != $"{TrainerName}")
+            {
+                clone.OT_Name = $"{TrainerName}";
+                clone.ClearNickname();
+                clone.PKRS_Infected = false;
+                clone.PKRS_Cured = false;
+                clone.PKRS_Days = 0;
+                clone.PKRS_Strain = 0;
+                poke.SendNotification(this, $"```fix\nDetected an ad OT/Nickname with your {(Species)clone.Species}! Fixed it for you!```");
+
+                return FixAds = false;
+            }
+            return FixAds = true;
         }
     }
 }

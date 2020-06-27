@@ -41,6 +41,20 @@ namespace SysBot.Pokemon
             return new PK8(data);
         }
 
+        public async Task SetLastUsedBall(Ball ball, CancellationToken token)
+        {
+            if (ball >= Ball.Fast && ball <= Ball.Beast)
+            {
+                new EncounterCount().BallIndex(ball, out int result);
+                var apriData = BitConverter.GetBytes(result);
+                await Connection.WriteBytesAsync(apriData, LastUsedBallOffset, token).ConfigureAwait(false);
+                return;
+            }
+
+            var data = BitConverter.GetBytes((int)ball);
+            await Connection.WriteBytesAsync(data, LastUsedBallOffset, token).ConfigureAwait(false);
+        }
+
         public async Task SetBoxPokemon(PK8 pkm, int box, int slot, CancellationToken token, SAV8? sav = null)
         {
             if (sav != null)

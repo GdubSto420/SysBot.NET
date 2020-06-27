@@ -11,9 +11,15 @@ namespace SysBot.Pokemon
             var ec = pkm.EncryptionConstant;
             var pid = pkm.PID;
             var IVs = pkm.IVs.Length == 0 ? GetBlankIVTemplate() : PKX.ReorderSpeedLast((int[])pkm.IVs.Clone());
+            var name = SpeciesName.GetSpeciesName(pkm.Species, 2);
+            var ot = pkm.OT_Name;
+            var abilityNo = pkm.AbilityNumber;
+            var ability = pkm.Ability;
+            var gender = pkm.GetSaneGender();
+            var nature = pkm.Nature;
             if (settings.ShowAllZ3Results)
             {
-                var matches = Z3Search.GetAllSeeds(ec, pid, IVs);
+                var matches = Z3Search.GetAllSeeds(ec, pid, IVs, name, ot, gender, abilityNo, ability, nature);
                 foreach (var match in matches)
                 {
                     var lump = new PokeTradeSummary("Calculated Seed:", match);
@@ -22,7 +28,7 @@ namespace SysBot.Pokemon
             }
             else
             {
-                var match = Z3Search.GetFirstSeed(ec, pid, IVs);
+                var match = Z3Search.GetFirstSeed(ec, pid, IVs, name, ot, gender, abilityNo, ability, nature);
                 var lump = new PokeTradeSummary("Calculated Seed:", match);
                 detail.SendNotification(bot, lump);
             }

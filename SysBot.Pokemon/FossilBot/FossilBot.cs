@@ -12,6 +12,7 @@ namespace SysBot.Pokemon
         private readonly BotCompleteCounts Counts;
         private readonly IDumper DumpSetting;
         private readonly FossilSettings Settings;
+        private readonly string Ping;
 
         public FossilBot(PokeBotConfig cfg, PokeTradeHub<PK8> hub) : base(cfg)
         {
@@ -19,6 +20,7 @@ namespace SysBot.Pokemon
             Counts = Hub.Counts;
             DumpSetting = Hub.Config.Folder;
             Settings = Hub.Config.Fossil;
+            Ping = !Hub.Config.PingOnMatch.Equals(string.Empty) ? $"<@{Hub.Config.PingOnMatch}>\n" : "";
         }
 
         private int encounterCount;
@@ -99,11 +101,11 @@ namespace SysBot.Pokemon
 
                     if (Settings.ContinueAfterMatch)
                     {
-                        Log("Result found! Continuing to collect more fossils.");
+                        Log($"{Ping}Result found! Continuing to collect more fossils.");
                     }
                     else
                     {
-                        Log("Result found! Stopping routine execution; restart the bot(s) to search again.");
+                        Log($"{Ping}Result found! Stopping routine execution; restart the bot(s) to search again.");
                         return;
                     }
                 }

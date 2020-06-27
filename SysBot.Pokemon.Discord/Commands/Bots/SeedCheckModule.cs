@@ -69,7 +69,7 @@ namespace SysBot.Pokemon.Discord
 
             var seed = Util.GetHexValue64(seedString);
 
-            var r = new SeedSearchResult(Z3SearchResult.Success, seed, -1);
+            var r = new SeedSearchResult(Z3SearchResult.Success, seed, -1, new int[6], string.Empty, string.Empty, default, default, default, default);
             var type = r.GetShinyType();
             var msg = r.ToString();
 

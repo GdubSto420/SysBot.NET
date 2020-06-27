@@ -25,6 +25,9 @@ namespace SysBot.Pokemon
         [Category(FeatureToggle), Description("Holds Capture button to record a 30 second clip when a matching shiny Pokémon is found by EncounterBot or Fossilbot.")]
         public bool CaptureVideoClip { get; set; }
 
+        [Category(FeatureToggle), Description("Enter your numerical Discord ID to be pinged in a log channel upon EggFetch, FossilBot or EncounterBot result.")]
+        public string PingOnMatch { get; set; } = string.Empty;
+
         [Category(FeatureToggle), Description("Extra time in milliseconds to wait after clicking + to reconnect to Y-Comm.")]
         public int ExtraTimeReconnectYComm { get; set; } = 0;
 
