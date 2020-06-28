@@ -135,18 +135,25 @@ namespace SysBot.Pokemon
 
         public void AddEncounteredSpecies(PKHeX.Core.PK8 pkm)
         {
-            if (!System.IO.File.Exists("EncounteredSpecies.txt"))
-                System.IO.File.AppendAllText("EncounteredSpecies.txt", $"Total = 0 Pokémon, 0 Shiny\n--------------------------------{System.Environment.NewLine}");
+            var file = "EncounteredSpecies.txt";
+            if (pkm.IsEgg)
+            {
+                file = "EggLog.txt";
+                if (!System.IO.File.Exists(file))
+                    System.IO.File.AppendAllText(file, $"Total = 0 Eggs, 0 Shiny\n--------------------------------{System.Environment.NewLine}");
+            }
+            else if (!System.IO.File.Exists(file))
+                System.IO.File.AppendAllText(file, $"Total = 0 Pokémon, 0 Shiny\n--------------------------------{System.Environment.NewLine}");
 
             var name = PKHeX.Core.SpeciesName.GetSpeciesName(pkm.Species, pkm.Language);
             var newname = PKHeX.Core.SpeciesName.GetSpeciesName(pkm.Species, pkm.Language);
-            var duplicate = name.Contains(newname) && System.IO.File.ReadAllText("EncounteredSpecies.txt").Contains(newname);
+            var duplicate = name.Contains(newname) && System.IO.File.ReadAllText(file).Contains(newname);
             string sinistea = "-Antique";
             string shiny = "-Shiny";
             var fullPattern = @"(^" + $"{newname}" + @"\W*)+(\d*)\.+(\d*)\D*\.+(\d*)\D*$";
             var total = @"(^Total\W*)+(\d*\d)+(\s\D*)+(\d*\d)+(\s\w*)";
             var countSpecies = @"\=\s(\d*)\W*\d*\.\.\.\d*";
-            var countShiny = @"\.(\d*\s)";
+            var countShiny = @"\.(\d*)\*";
 
             if (name == "Sinistea" && pkm.AltForm != 0)
                 name = $"{name + sinistea}";
@@ -158,24 +165,24 @@ namespace SysBot.Pokemon
                 if (!name.Contains(shiny) && name.Contains("Sinistea"))
                 {
                     if (name == "Sinistea")
-                        System.IO.File.AppendAllText("EncounteredSpecies.txt", $"{newname} = {1}...{0}...{0}\n");
+                        System.IO.File.AppendAllText(file, $"{newname} = {1}...{0}...{0}*\n");
                     if (name.Contains(sinistea))
-                        System.IO.File.AppendAllText("EncounteredSpecies.txt", "ANTIQUE JACKPOT!\n");
+                        System.IO.File.AppendAllText(file, "ANTIQUE JACKPOT!\n");
                 }
                 else if (name.Contains(shiny) && name.Contains("Sinistea"))
                 {
                     if (name == "Sinistea")
-                        System.IO.File.AppendAllText("EncounteredSpecies.txt", $"{newname} = {1}...{0}...{1}\n");
+                        System.IO.File.AppendAllText(file, $"{newname} = {1}...{0}...{1}*\n");
                     if (name.Contains(sinistea))
-                        System.IO.File.AppendAllText("EncounteredSpecies.txt", $"{newname} = {1}...{1}...{1}\n");
+                        System.IO.File.AppendAllText(file, $"{newname} = {1}...{1}...{1}*\n");
                 }
                 else if (!name.Contains(shiny) && !name.Contains("Sinistea"))
-                    System.IO.File.AppendAllText("EncounteredSpecies.txt", $"{newname} = {1}...{0}\n");
+                    System.IO.File.AppendAllText(file, $"{newname} = {1}...{0}*\n");
                 else if (name.Contains(shiny) && !name.Contains("Sinistea"))
-                    System.IO.File.AppendAllText("EncounteredSpecies.txt", $"{newname} = {1}...{1}\n");
+                    System.IO.File.AppendAllText(file, $"{newname} = {1}...{1}*\n");
             }
 
-            System.IO.StreamReader reader = new System.IO.StreamReader("EncounteredSpecies.txt");
+            System.IO.StreamReader reader = new System.IO.StreamReader(file);
             var content = reader.ReadToEnd();
             reader.Close();
 
@@ -190,27 +197,31 @@ namespace SysBot.Pokemon
                 if (!name.Contains(shiny))
                 {
                     if (name.Contains(newname) && name == "Sinistea")
-                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{antiquecount}...{shinycount}", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{antiquecount}...{shinycount}*", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
                     if (name.Contains(newname) && name.Contains(sinistea))
-                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{antiquecount + 1}...{shinycount}", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{antiquecount + 1}...{shinycount}*", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
                     if (name.Contains(newname) && !name.Contains("Sinistea"))
-                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{shinycount}", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{shinycount}*", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
                 }
                 else if (name.Contains(shiny))
                 {
                     if (name.Contains(newname) && name == "Sinistea")
-                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{antiquecount}...{shinycount + 1}", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{antiquecount}...{shinycount + 1}*", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
                     if (name.Contains(newname) && name.Contains(sinistea))
-                        System.IO.File.AppendAllText("EncounteredSpecies.txt", "ANTIQUE JACKPOT!\n");
+                        System.IO.File.AppendAllText(file, "ANTIQUE JACKPOT!\n");
                     if (name.Contains(newname) && !name.Contains("Sinistea"))
-                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{shinycount + 1}", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+                        content = System.Text.RegularExpressions.Regex.Replace(content, fullPattern, $"{speciesname}{speciescount + 1}...{shinycount + 1}*", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
                 }
             }
 
             var totalSpecies = System.Text.RegularExpressions.Regex.Matches(content, countSpecies, System.Text.RegularExpressions.RegexOptions.Multiline).OfType<System.Text.RegularExpressions.Match>().Select(countSpecies => int.Parse(countSpecies.Groups[1].Value)).Sum();
             var totalShiny = System.Text.RegularExpressions.Regex.Matches(content, countShiny, System.Text.RegularExpressions.RegexOptions.Multiline).OfType<System.Text.RegularExpressions.Match>().Select(countShiny => int.Parse(countShiny.Groups[1].Value)).Sum();
-            content = System.Text.RegularExpressions.Regex.Replace(content, total, $"Total = {totalSpecies} Pokémon, {totalShiny} Shiny", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
-            System.IO.StreamWriter writer = new System.IO.StreamWriter("EncounteredSpecies.txt");
+            
+            if (pkm.IsEgg)
+                content = System.Text.RegularExpressions.Regex.Replace(content, total, $"Total = {totalSpecies} Eggs, {totalShiny} Shiny", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+            else content = System.Text.RegularExpressions.Regex.Replace(content, total, $"Total = {totalSpecies} Pokémon, {totalShiny} Shiny", System.Text.RegularExpressions.RegexOptions.Multiline).TrimEnd();
+            
+            System.IO.StreamWriter writer = new System.IO.StreamWriter(file);
             writer.WriteLine(content);
             writer.Close();
         }

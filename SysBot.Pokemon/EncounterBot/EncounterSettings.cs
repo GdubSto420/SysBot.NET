@@ -20,6 +20,9 @@ namespace SysBot.Pokemon
         [Category(Encounter), Description("Targets the specified IVs HP/Atk/Def/SpA/SpD/Spe. Matches 0's and 31's, checks min value otherwise. Use \"x\" for unchecked IVs and \"/\" as a separator.")]
         public string DesiredIVs { get; set; } = "";
 
+        [Category(Encounter), Description("Toggle Strong Spawn bot. Needs prior set up (encounter Strong Spawn, run, change date forward to the weather you want, save on its spawn location).")]
+        public bool StrongSpawn { get; set; } = false;
+
         [Category(Encounter), Description("Toggle catching Pokémon. Master Ball will be used to guarantee a catch.")]
         public bool CatchEncounter { get; set; } = false;
 
