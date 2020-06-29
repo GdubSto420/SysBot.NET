@@ -28,6 +28,9 @@ namespace SysBot.Pokemon
         [Category(TradeCode), Description("Custom message to display if a non-ItemMule species is requested via $trade.")]
         public string ItemMuleCustomMessage { get; set; } = string.Empty;
 
+        [Category(TradeCode), Description("Toggle Ditto trades for breeding. Can be used with \"ItemMule\".")]
+        public bool DittoTrade { get; set; } = false;
+
         [Category(TradeCode), Description("Silly, useless feature to post a meme if someone requests an illegal item for ItemMule.")]
         public bool Memes { get; set; } = false;
 

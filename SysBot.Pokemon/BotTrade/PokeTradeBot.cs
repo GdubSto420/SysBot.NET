@@ -279,8 +279,8 @@ namespace SysBot.Pokemon
             {
                 // Inject the shown Pokémon.
                 var clone = (PK8)pk.Clone();
-                var adOT = System.Text.RegularExpressions.Regex.Match(clone.OT_Name, @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*)|(TV$)").Value != "" 
-                    || System.Text.RegularExpressions.Regex.Match(clone.Nickname, @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*)|(TV$)").Value != "";
+                var adOT = System.Text.RegularExpressions.Regex.Match(clone.OT_Name, @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*)|(TV$)|(PKHeX)").Value != "" 
+                    || System.Text.RegularExpressions.Regex.Match(clone.Nickname, @"(YT$)|(YT\w*$)|(Lab$)|(\.\w*)|(TV$)|(PKHeX)").Value != "";
 
                 if (Hub.Config.Discord.ReturnPK8s && !Hub.Config.Trade.FixAdOTs)
                     poke.SendNotification(this, clone, "Here's what you showed me!");

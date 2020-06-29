@@ -116,7 +116,7 @@ namespace SysBot.Pokemon.Discord
 
         private async Task AddTradeToQueueAsync(int code, string trainerName, PK8 pk8, bool sudo)
         {
-            if (!pk8.CanBeTraded() || !IsItemMule(pk8))
+            if (!pk8.CanBeTraded() || !IsItemMule(pk8) || !DittoTrade(pk8))
             {
                 if (Info.Hub.Config.Trade.ItemMuleCustomMessage == string.Empty || IsItemMule(pk8))
                     Info.Hub.Config.Trade.ItemMuleCustomMessage = "Provided Pokémon content is blocked from trading!";
@@ -136,7 +136,7 @@ namespace SysBot.Pokemon.Discord
 
         private bool IsItemMule(PK8 pk8)
         {
-            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None)
+            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None || pk8.Species == 132 && Info.Hub.Config.Trade.DittoTrade)
                 return true;
             return !(pk8.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()) || pk8.IsShiny);
         }
@@ -145,6 +145,7 @@ namespace SysBot.Pokemon.Discord
         {
             var path = Info.Hub.Config.Trade.MemeFileNames.Split(',');
             bool web = false;
+
             if (Info.Hub.Config.Trade.MemeFileNames.Contains(".com"))
                 web = true;
 
@@ -178,12 +179,77 @@ namespace SysBot.Pokemon.Discord
             }
             else if (Info.Hub.Config.Trade.ItemMuleSpecies != Species.None && set.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()))
             {
+                if (Info.Hub.Config.Trade.DittoTrade && set.Species == 132)
+                    return false;
+
                 if (web)
                     await Context.Channel.SendMessageAsync($"{path[4]}").ConfigureAwait(false);
                 else await Context.Channel.SendFileAsync(path[4]).ConfigureAwait(false);
                 return true;
             }
             return false;
+        }
+
+        private bool DittoTrade(PKM pk8)
+        {
+            if (pk8.Species == SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()))
+                return true;
+
+            if (!Info.Hub.Config.Trade.DittoTrade)
+                return true;
+
+            if (pk8.Species != 132)
+                return false;
+
+            var dittoLang = new string[] { "JPN", "ENG", "FRE", "ITA", "GER", "ESP", "KOR", "CHS", "CHT" };
+            var dittoStats = new string[] { "ATK", "SPE" };
+
+            if (!(pk8.Nickname.Contains(dittoLang[0]) || pk8.Nickname.Contains(dittoLang[1]) || pk8.Nickname.Contains(dittoLang[2]) || pk8.Nickname.Contains(dittoLang[3]) || pk8.Nickname.Contains(dittoLang[4])
+                || pk8.Nickname.Contains(dittoLang[5]) || pk8.Nickname.Contains(dittoLang[6]) || pk8.Nickname.Contains(dittoLang[7]) || pk8.Nickname.Contains(dittoLang[8])))
+            {
+                pk8.Nickname = "KOR";
+                pk8.IsNicknamed = true;
+            }
+
+            if (pk8.Nickname.Contains(dittoLang[0]))
+                pk8.Language = (int)LanguageID.Japanese;
+            else if (pk8.Nickname.Contains(dittoLang[1]))
+                pk8.Language = (int)LanguageID.English;
+            else if (pk8.Nickname.Contains(dittoLang[2]))
+                pk8.Language = (int)LanguageID.French;
+            else if (pk8.Nickname.Contains(dittoLang[3]))
+                pk8.Language = (int)LanguageID.Italian;
+            else if (pk8.Nickname.Contains(dittoLang[4]))
+                pk8.Language = (int)LanguageID.German;
+            else if (pk8.Nickname.Contains(dittoLang[5]))
+                pk8.Language = (int)LanguageID.Spanish;
+            else if (pk8.Nickname.Contains(dittoLang[6]))
+                pk8.Language = (int)LanguageID.Korean;
+            else if (pk8.Nickname.Contains(dittoLang[7]))
+                pk8.Language = (int)LanguageID.ChineseS;
+            else if (pk8.Nickname.Contains(dittoLang[8]))
+                pk8.Language = (int)LanguageID.ChineseT;
+
+            if (!(pk8.Nickname.Contains(dittoStats[0]) || pk8.Nickname.Contains(dittoStats[1])))
+                pk8.IVs = new int[] { 31, 31, 31, 31, 31, 31 };
+            else if (pk8.Nickname.Contains(dittoStats[0]))
+                pk8.IVs = new int[] { 31, 0, 31, 31, 31, 31 };
+            else if (pk8.Nickname.Contains(dittoStats[1]))
+                pk8.IVs = new int[] { 31, 31, 31, 0, 31, 31 };
+
+            pk8.StatNature = pk8.Nature;
+            pk8.SetAbility(150);
+            pk8.Met_Level = 40;
+            pk8.Move1 = 144;
+            pk8.Move1_PP = 0;
+            pk8.Met_Location = 162;
+            pk8.Ball = 21;
+            pk8.SetSuggestedHyperTrainingData();
+
+            if (pk8.Nickname.Contains(dittoStats[0]) && pk8.Nickname.Contains(dittoStats[1]))
+                pk8.IVs = new int[] { 31, 0, 31, 0, 31, 31 };
+
+            return true;
         }
     }
 }
