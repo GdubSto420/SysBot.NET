@@ -31,13 +31,16 @@ namespace SysBot.Pokemon
         [Category(TradeCode), Description("Toggle Ditto trades for breeding. Can be used with \"ItemMule\".")]
         public bool DittoTrade { get; set; } = false;
 
-        [Category(TradeCode), Description("Silly, useless feature to post a meme if someone requests an illegal item for ItemMule.")]
+        [Category(TradeCode), Description("Toggle Egg trades. Can be used with \"ItemMule\".")]
+        public bool EggTrade { get; set; } = false;
+
+        [Category(TradeCode), Description("Silly, useless feature to post a meme if someone requests an illegal item for \"ItemMule\".")]
         public bool Memes { get; set; } = false;
 
-        [Category(TradeCode), Description("Enter either meme website links or file names with extensions. Five memes (in order; Cherish Ball, Park Ball, Dynamax Crystals, Shiny, off-species). I.e. file1.png,file2.jpg, etc.")]
+        [Category(TradeCode), Description("Enter either meme website links or file names with extensions. Six memes (in order; Cherish Ball, Park Ball, Dynamax Crystals, Shiny, Legendary Eggs, off-species). I.e. file1.png,file2.jpg, etc.")]
         public string MemeFileNames { get; set; } = string.Empty;
 
-        [Category(TradeCode), Description("Clear Nickname and fix OT if shown Pokémon's Nickname or OT is an ad (CloneBot).")]
+        [Category(TradeCode), Description("Change $clone behavior to fix a Pokémon if shown Pokémon's Nickname or OT is an ad.")]
         public bool FixAdOTs { get; set; } = false;
 
         /// <summary>

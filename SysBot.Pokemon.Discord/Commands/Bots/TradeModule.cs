@@ -116,13 +116,19 @@ namespace SysBot.Pokemon.Discord
 
         private async Task AddTradeToQueueAsync(int code, string trainerName, PK8 pk8, bool sudo)
         {
-            if (!pk8.CanBeTraded() || !IsItemMule(pk8) || !DittoTrade(pk8))
+            if (!pk8.CanBeTraded() || !IsItemMule(pk8))
             {
                 if (Info.Hub.Config.Trade.ItemMuleCustomMessage == string.Empty || IsItemMule(pk8))
                     Info.Hub.Config.Trade.ItemMuleCustomMessage = "Provided Pokémon content is blocked from trading!";
                 await ReplyAsync($"{Info.Hub.Config.Trade.ItemMuleCustomMessage}").ConfigureAwait(false);
                 return;
             }
+
+            if (Info.Hub.Config.Trade.DittoTrade)
+                DittoTrade(pk8);
+
+            if (Info.Hub.Config.Trade.EggTrade)
+                EggTrade(pk8);
 
             var la = new LegalityAnalysis(pk8);
             if (!la.Valid && SysCordInstance.Self.Hub.Config.Legality.VerifyLegality)
@@ -136,17 +142,25 @@ namespace SysBot.Pokemon.Discord
 
         private bool IsItemMule(PK8 pk8)
         {
-            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None || pk8.Species == 132 && Info.Hub.Config.Trade.DittoTrade)
+            if (Info.Hub.Config.Trade.ItemMuleSpecies == Species.None || pk8.Species == 132 && Info.Hub.Config.Trade.DittoTrade || Info.Hub.Config.Trade.EggTrade && pk8.Nickname == "Egg")
                 return true;
             return !(pk8.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()) || pk8.IsShiny);
         }
 
         private async Task<bool> TrollAsync(string content, IBattleTemplate set)
         {
+            var defaultMeme = "https://i.imgur.com/qaCwr09.png";
             var path = Info.Hub.Config.Trade.MemeFileNames.Split(',');
             bool web = false;
+            bool memeEmpty = false;
 
-            if (Info.Hub.Config.Trade.MemeFileNames.Contains(".com"))
+            if (path.Length < 6)
+            {
+                path = new string[] { defaultMeme, defaultMeme, defaultMeme, defaultMeme, defaultMeme, defaultMeme };
+                memeEmpty = true;
+            }
+
+            if (Info.Hub.Config.Trade.MemeFileNames.Contains(".com") || memeEmpty)
                 web = true;
 
             if (set.HeldItem == 16)
@@ -177,29 +191,30 @@ namespace SysBot.Pokemon.Discord
                 else await Context.Channel.SendFileAsync(path[3]).ConfigureAwait(false);
                 return true;
             }
-            else if (Info.Hub.Config.Trade.ItemMuleSpecies != Species.None && set.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()))
+            else if (set.Nickname == "Egg" && set.Species >= 888 && set.Species <= 893)
             {
-                if (Info.Hub.Config.Trade.DittoTrade && set.Species == 132)
-                    return false;
-
                 if (web)
                     await Context.Channel.SendMessageAsync($"{path[4]}").ConfigureAwait(false);
                 else await Context.Channel.SendFileAsync(path[4]).ConfigureAwait(false);
                 return true;
             }
+            else if (Info.Hub.Config.Trade.ItemMuleSpecies != Species.None && set.Species != SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()))
+            {
+                if (Info.Hub.Config.Trade.DittoTrade && set.Species == 132 || Info.Hub.Config.Trade.EggTrade && set.Nickname == "Egg")
+                    return false;
+
+                if (web)
+                    await Context.Channel.SendMessageAsync($"{path[5]}").ConfigureAwait(false);
+                else await Context.Channel.SendFileAsync(path[5]).ConfigureAwait(false);
+                return true;
+            }
             return false;
         }
 
-        private bool DittoTrade(PKM pk8)
+        private void DittoTrade(PKM pk8)
         {
-            if (pk8.Species == SpeciesName.GetSpeciesID(Info.Hub.Config.Trade.ItemMuleSpecies.ToString()))
-                return true;
-
-            if (!Info.Hub.Config.Trade.DittoTrade)
-                return true;
-
             if (pk8.Species != 132)
-                return false;
+                return;
 
             var dittoLang = new string[] { "JPN", "ENG", "FRE", "ITA", "GER", "ESP", "KOR", "CHS", "CHT" };
             var dittoStats = new string[] { "ATK", "SPE" };
@@ -249,7 +264,39 @@ namespace SysBot.Pokemon.Discord
             if (pk8.Nickname.Contains(dittoStats[0]) && pk8.Nickname.Contains(dittoStats[1]))
                 pk8.IVs = new int[] { 31, 0, 31, 0, 31, 31 };
 
-            return true;
+            return;
+        }
+
+        private void EggTrade(PK8 pk8)
+        {
+            if (!Info.Hub.Config.Trade.EggTrade || pk8.Nickname != "Egg")
+                return;
+
+            pk8.IsEgg = true;
+            pk8.Egg_Location = 60002;
+            pk8.HeldItem = 0;
+            pk8.CurrentLevel = 1;
+            pk8.EXP = 0;
+            pk8.DynamaxLevel = 0;
+            pk8.Met_Level = 1;
+            pk8.Met_Location = 0;
+            pk8.CurrentHandler = 0;
+            pk8.OT_Friendship = 1;
+            pk8.HT_Name = "";
+            pk8.HT_Friendship = 0;
+            pk8.HT_Language = 0;
+            pk8.HT_Gender = 0;
+            pk8.HT_Memory = 0;
+            pk8.HT_Feeling = 0;
+            pk8.HT_Intensity = 0;
+            pk8.EVs = new int[] { 0, 0, 0, 0, 0, 0 };
+            pk8.Markings = new int[] { 0, 0, 0, 0, 0, 0, 0, 0 };
+            pk8.ClearRecordFlags();
+            pk8.FixMoves();
+            pk8.GetSuggestedRelearnMoves();
+            pk8.SetSuggestedHyperTrainingData();
+
+            return;
         }
     }
 }
